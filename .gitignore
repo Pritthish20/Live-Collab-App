@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Builds
+client/.next/
+client/out/
+server/dist/
+
+# Environment
+.env
+.env.*
+!.env.example
+!server/.env.example
+client/.env.local
+client/.env.*.local
+!client/.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local project documentation requested to stay out of git.
+docs/

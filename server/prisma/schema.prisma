@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+model User {
+  id             String         @id @default(cuid())
+  name           String
+  email          String         @unique
+  passwordHash   String
+  ownedDocuments Document[]     @relation("DocumentOwner")
+  collaborators  Collaborator[]
+  snapshots      Snapshot[]
+  activityLogs   ActivityLog[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Document {
+  id            String         @id @default(cuid())
+  title         String
+  ownerId       String
+  owner         User           @relation("DocumentOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  collaborators Collaborator[]
+  state         DocumentState?
+  snapshots     Snapshot[]
+  activityLogs  ActivityLog[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Collaborator {
+  id         String   @id @default(cuid())
+  documentId String
+  userId     String
+  role       Role
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([documentId, userId])
+  @@index([userId])
+}
+
+model DocumentState {
+  id         String   @id @default(cuid())
+  documentId String   @unique
+  state      Bytes
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Snapshot {
+  id          String   @id @default(cuid())
+  documentId  String
+  createdById String?
+  title       String?
+  state       Bytes
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([documentId])
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  documentId String
+  actorId    String?
+  eventType  String
+  metadata   Json?
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([documentId])
+}
+
