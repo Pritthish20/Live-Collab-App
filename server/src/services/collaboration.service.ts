@@ -25,17 +25,23 @@ export class CollaborationService {
     }
 
     const session = this.verifyToken(token);
-    const role = await this.permissions.getDocumentRole(documentName, session.userId);
-
-    if (!role) {
-      throw new HttpError(403, "FORBIDDEN", "You cannot access this document.");
-    }
+    const role = await this.getAuthorizedRole(documentName, session.userId);
 
     return {
       id: session.userId,
       email: session.email,
       role
     };
+  }
+
+  async getAuthorizedRole(documentName: string, userId: string) {
+    const role = await this.permissions.getDocumentRole(documentName, userId);
+
+    if (!role) {
+      throw new HttpError(403, "FORBIDDEN", "You cannot access this document.");
+    }
+
+    return role;
   }
 
   isReadOnlyRole(role: Role) {

@@ -13,7 +13,7 @@ export function DashboardPage() {
           <div className="page-heading">
             <p className="eyebrow">Workspace</p>
             <h1>Dashboard</h1>
-            <p className="muted">Create a document or reopen recent work.</p>
+            <p className="muted">Create a document or reopen shared work.</p>
           </div>
           <CreateDocumentForm />
         </Panel>

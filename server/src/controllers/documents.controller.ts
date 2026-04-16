@@ -75,20 +75,6 @@ export class DocumentsController {
       next(error);
     }
   };
-
-  share = async (request: Request, response: Response, next: NextFunction) => {
-    try {
-      const user = RequestUtils.getAuthenticatedUser(request);
-      const collaborator = await this.service.shareDocument(
-        RequestUtils.getRequiredParam(request, "id"),
-        user.id,
-        DocumentsSchema.share.parse(request.body)
-      );
-      ResponseUtils.sendData(response, collaborator);
-    } catch (error) {
-      next(error);
-    }
-  };
 }
 
 export const documentsController = new DocumentsController();

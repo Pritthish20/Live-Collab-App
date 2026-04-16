@@ -9,7 +9,9 @@ export function PresenceList({ users, connectionStatus }: PresenceListProps) {
   if (connectionStatus !== "connected") {
     return (
       <div className="presence-list" aria-label="Active collaborators">
-        <span className="muted">Presence reconnects when the editor is online.</span>
+        <span className="muted">
+          Presence will refresh after the connection returns.
+        </span>
       </div>
     );
   }

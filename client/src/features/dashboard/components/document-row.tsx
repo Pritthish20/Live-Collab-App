@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LinkButton } from "@/components/ui/link-button";
+import { RoleAccess } from "@/features/documents/utils/role-access";
 import type { DocumentSummary } from "@/types";
 import { useDeleteDocument } from "../api/use-delete-document";
 import { useUpdateDocument } from "../api/use-update-document";
@@ -18,8 +19,9 @@ export function DocumentRow({ document }: DocumentRowProps) {
   const [title, setTitle] = useState(document.title);
   const updateDocument = useUpdateDocument();
   const deleteDocument = useDeleteDocument();
-  const canRename = document.role === "owner" || document.role === "editor";
-  const canDelete = document.role === "owner";
+  const canRename = RoleAccess.canRename(document.role);
+  const canDelete = RoleAccess.canDelete(document.role);
+  const roleDescription = RoleAccess.description(document.role);
   const updatedAt = new Intl.DateTimeFormat("en", {
     month: "short",
     day: "numeric",
@@ -87,7 +89,8 @@ export function DocumentRow({ document }: DocumentRowProps) {
           <>
             <strong className="document-title">{document.title}</strong>
             <p className="document-meta muted">
-              <Badge>{document.role}</Badge>
+              <Badge>{RoleAccess.label(document.role)}</Badge>
+              <span>{roleDescription}</span>
               <span>Updated {updatedAt}</span>
             </p>
           </>

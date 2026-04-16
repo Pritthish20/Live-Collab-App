@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/panel";
 import { useCurrentUser } from "@/features/auth/session/api/use-current-user";
+import { RoleAccess } from "@/features/documents/utils/role-access";
 import { pickUserColor } from "@/utils/color";
 import { Config } from "@/utils/config";
 import { SessionStorage } from "@/utils/session";
@@ -21,7 +22,9 @@ import { useDocument } from "../api/use-document";
 import { useUpdateDocument } from "../api/use-update-document";
 import type { AwarenessIdentity, ConnectionStatus, PresenceUser } from "@/types";
 import { AwarenessUtils } from "../utils/awareness";
+import { RealtimeStatus } from "../utils/realtime-status";
 import { PresenceList } from "./presence-list";
+import { ShareDocumentDialog } from "./share-document-dialog";
 
 type CollaborativeEditorProps = {
   documentId: string;
@@ -40,10 +43,20 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
   const [unsyncedChanges, setUnsyncedChanges] = useState(0);
   const [authError, setAuthError] = useState<string | null>(null);
   const [activeUsers, setActiveUsers] = useState<PresenceUser[]>([]);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const currentUserIdRef = useRef<string | null>(null);
-  const canEdit =
-    documentQuery.data?.role === "owner" || documentQuery.data?.role === "editor";
-  const canManage = documentQuery.data?.role === "owner";
+  const documentRole = documentQuery.data?.role ?? null;
+  const canEdit = RoleAccess.canEdit(documentRole);
+  const canManage = RoleAccess.canManage(documentRole);
+  const canRename = RoleAccess.canRename(documentRole);
+  const canShare = RoleAccess.canShare(documentRole);
+  const isReadOnly = RoleAccess.isReadOnly(documentRole);
+  const realtimeStatus = RealtimeStatus.getMeta(
+    connectionStatus,
+    isSynced,
+    unsyncedChanges
+  );
+  const isRealtimeDisconnected = RealtimeStatus.isDisconnected(connectionStatus);
   const awarenessUser = useMemo<AwarenessIdentity>(
     () => ({
       id: currentUser.data?.id ?? "anonymous",
@@ -154,12 +167,6 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
     }
   }
 
-  const syncLabel = isSynced
-    ? "Synced"
-    : unsyncedChanges > 0
-      ? `${unsyncedChanges} pending`
-      : "Syncing";
-
   if (documentQuery.isError || authError) {
     return (
       <Panel className="stack">
@@ -184,31 +191,55 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
             aria-label="Document title"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            disabled={!canEdit || documentQuery.isLoading}
+            disabled={
+              !canRename || documentQuery.isLoading || isRealtimeDisconnected
+            }
           />
-          <Button type="submit" disabled={!canEdit || updateDocument.isPending}>
-            Rename
-          </Button>
+          {canRename ? (
+            <Button
+              type="submit"
+              disabled={updateDocument.isPending || isRealtimeDisconnected}
+            >
+              Rename
+            </Button>
+          ) : null}
           {canManage ? (
             <Button
               type="button"
               variant="secondary"
               onClick={onDelete}
-              disabled={deleteDocument.isPending}
+              disabled={deleteDocument.isPending || isRealtimeDisconnected}
             >
               Delete
             </Button>
           ) : null}
+          {canShare ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsShareOpen(true)}
+              disabled={isRealtimeDisconnected}
+            >
+              Share
+            </Button>
+          ) : null}
         </form>
-        <p className="muted">
-          {documentQuery.data
-            ? `Role: ${documentQuery.data.role}`
-            : "Loading document access..."}
-        </p>
+        <div className="role-summary">
+          {documentRole ? <Badge>{RoleAccess.label(documentRole)}</Badge> : null}
+          <span className="muted">
+            {documentRole
+              ? RoleAccess.description(documentRole)
+              : "Loading document access..."}
+          </span>
+        </div>
+        <div className={`connection-banner ${realtimeStatus.tone}`} role="status">
+          <strong>{realtimeStatus.label}</strong>
+          <span>{realtimeStatus.message}</span>
+        </div>
         <div className="editor-status-row">
-          <Badge>Connection: {connectionStatus}</Badge>
-          <Badge>{syncLabel}</Badge>
-          {!canEdit && documentQuery.data ? <Badge>Read only</Badge> : null}
+          <Badge>Connection: {realtimeStatus.label}</Badge>
+          <Badge>{realtimeStatus.syncLabel}</Badge>
+          {isReadOnly ? <Badge>Read only</Badge> : null}
         </div>
         <PresenceList users={activeUsers} connectionStatus={connectionStatus} />
         {authError ? <p className="error">{authError}</p> : null}
@@ -222,6 +253,13 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
       <div className="editor-frame">
         <EditorContent editor={editor} />
       </div>
+      {canShare ? (
+        <ShareDocumentDialog
+          documentId={documentId}
+          isOpen={isShareOpen}
+          onClose={() => setIsShareOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { prisma } from "../db/prisma.js";
-import type { DocumentInput, ShareInput } from "../schemas/documents.schema.js";
+import type { DocumentInput } from "../schemas/documents.schema.js";
 import { HttpError } from "../utils/errors.js";
 import {
   PermissionsService,
@@ -147,59 +147,6 @@ export class DocumentsService {
     });
 
     return { ok: true };
-  }
-
-  async shareDocument(documentId: string, userId: string, input: ShareInput) {
-    const role = await this.permissions.getDocumentRole(documentId, userId);
-
-    if (!role || !this.permissions.canManage(role)) {
-      throw new HttpError(
-        403,
-        "FORBIDDEN",
-        "Only the owner can share this document."
-      );
-    }
-
-    const collaboratorUser = await prisma.user.findUnique({
-      where: {
-        email: input.email
-      }
-    });
-
-    if (!collaboratorUser) {
-      throw new HttpError(404, "USER_NOT_FOUND", "No user found for that email.");
-    }
-
-    const collaborator = await prisma.collaborator.upsert({
-      where: {
-        documentId_userId: {
-          documentId,
-          userId: collaboratorUser.id
-        }
-      },
-      create: {
-        documentId,
-        userId: collaboratorUser.id,
-        role: input.role === "editor" ? Role.EDITOR : Role.VIEWER
-      },
-      update: {
-        role: input.role === "editor" ? Role.EDITOR : Role.VIEWER
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        }
-      }
-    });
-
-    return {
-      user: collaborator.user,
-      role: this.permissions.roleToApi(collaborator.role)
-    };
   }
 
   private formatDocumentSummary(document: DocumentSummaryRecord) {

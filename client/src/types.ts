@@ -4,16 +4,28 @@ export type User = {
   email: string;
 };
 
+export type DocumentRole = "owner" | "editor" | "viewer";
+
 export type DocumentSummary = {
   id: string;
   title: string;
-  role: "owner" | "editor" | "viewer";
+  role: DocumentRole;
   createdAt: string;
   updatedAt: string;
 };
 
 export type DocumentDetail = DocumentSummary & {
   ownerId: string;
+};
+
+export type CollaboratorRole = DocumentRole;
+
+export type Collaborator = {
+  id: string;
+  user: User;
+  role: CollaboratorRole;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected";
