@@ -9,8 +9,12 @@ export function DashboardPage() {
   return (
     <RequireAuth>
       <section className="page stack">
-        <Panel className="stack">
-          <h1>Dashboard</h1>
+        <Panel className="stack dashboard-hero">
+          <div className="page-heading">
+            <p className="eyebrow">Workspace</p>
+            <h1>Dashboard</h1>
+            <p className="muted">Create a document or reopen recent work.</p>
+          </div>
           <CreateDocumentForm />
         </Panel>
         <DocumentList />

@@ -22,7 +22,7 @@ export function CreateDocumentForm() {
   }
 
   return (
-    <form className="nav-links" onSubmit={onCreate}>
+    <form className="create-document-form" onSubmit={onCreate}>
       <Input
         value={title}
         onChange={(event) => setTitle(event.target.value)}

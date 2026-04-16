@@ -28,10 +28,14 @@ export function LoginPage() {
 
   return (
     <RedirectIfAuthenticated>
-      <section className="page">
-        <Panel>
+      <section className="page auth-page">
+        <Panel className="auth-panel">
           <form className="stack" onSubmit={onSubmit}>
-            <h1>Login</h1>
+            <div className="page-heading">
+              <p className="eyebrow">Welcome back</p>
+              <h1>Login</h1>
+              <p className="muted">Open your workspace and continue writing.</p>
+            </div>
             <label className="stack">
               Email
               <Input

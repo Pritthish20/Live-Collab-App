@@ -20,6 +20,12 @@ export function DocumentRow({ document }: DocumentRowProps) {
   const deleteDocument = useDeleteDocument();
   const canRename = document.role === "owner" || document.role === "editor";
   const canDelete = document.role === "owner";
+  const updatedAt = new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(new Date(document.updatedAt));
 
   useEffect(() => {
     setTitle(document.title);
@@ -79,9 +85,10 @@ export function DocumentRow({ document }: DocumentRowProps) {
           </form>
         ) : (
           <>
-            <strong>{document.title}</strong>
-            <p className="muted">
+            <strong className="document-title">{document.title}</strong>
+            <p className="document-meta muted">
               <Badge>{document.role}</Badge>
+              <span>Updated {updatedAt}</span>
             </p>
           </>
         )}

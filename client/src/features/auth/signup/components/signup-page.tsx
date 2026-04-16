@@ -29,10 +29,14 @@ export function SignupPage() {
 
   return (
     <RedirectIfAuthenticated>
-      <section className="page">
-        <Panel>
+      <section className="page auth-page">
+        <Panel className="auth-panel">
           <form className="stack" onSubmit={onSubmit}>
-            <h1>Create account</h1>
+            <div className="page-heading">
+              <p className="eyebrow">Start writing</p>
+              <h1>Create account</h1>
+              <p className="muted">Create documents and collaborate in real time.</p>
+            </div>
             <label className="stack">
               Name
               <Input

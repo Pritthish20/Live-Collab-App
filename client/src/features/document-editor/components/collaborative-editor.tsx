@@ -2,11 +2,11 @@
 
 import { HocuspocusProvider } from "@hocuspocus/provider";
 import Collaboration from "@tiptap/extension-collaboration";
-import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
+import CollaborationCaret from "@tiptap/extension-collaboration-caret";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import * as Y from "yjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
   const [unsyncedChanges, setUnsyncedChanges] = useState(0);
   const [authError, setAuthError] = useState<string | null>(null);
   const [activeUsers, setActiveUsers] = useState<PresenceUser[]>([]);
+  const currentUserIdRef = useRef<string | null>(null);
   const canEdit =
     documentQuery.data?.role === "owner" || documentQuery.data?.role === "editor";
   const canManage = documentQuery.data?.role === "owner";
@@ -52,6 +53,11 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
     [currentUser.data?.id, currentUser.data?.name]
   );
   const ydoc = useMemo(() => new Y.Doc(), []);
+
+  useEffect(() => {
+    currentUserIdRef.current = currentUser.data?.id ?? null;
+  }, [currentUser.data?.id]);
+
   const provider = useMemo(
     () =>
       new HocuspocusProvider({
@@ -71,11 +77,11 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
         },
         onAwarenessChange: ({ states }) => {
           setActiveUsers(
-            AwarenessUtils.getPresenceUsers(states, currentUser.data?.id ?? null)
+            AwarenessUtils.getPresenceUsers(states, currentUserIdRef.current)
           );
         }
       }),
-    [currentUser.data?.id, documentId, ydoc]
+    [documentId, ydoc]
   );
 
   useEffect(() => {
@@ -105,7 +111,7 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
       Collaboration.configure({
         document: ydoc
       }),
-      CollaborationCursor.configure({
+      CollaborationCaret.configure({
         provider,
         user: awarenessUser
       })
@@ -120,6 +126,10 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
   useEffect(() => {
     editor?.setEditable(canEdit && !authError);
   }, [authError, canEdit, editor]);
+
+  useEffect(() => {
+    editor?.commands.updateUser(awarenessUser);
+  }, [awarenessUser, editor]);
 
   function onRename(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -168,7 +178,7 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
 
   return (
     <div className="stack">
-      <Panel className="stack">
+      <Panel className="stack editor-toolbar">
         <form className="document-title-form" onSubmit={onRename}>
           <Input
             aria-label="Document title"
