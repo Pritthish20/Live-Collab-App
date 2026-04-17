@@ -6,7 +6,6 @@ export function HomePage() {
     <section className="page stack">
       <Panel className="stack home-panel">
         <div className="page-heading">
-          <p className="eyebrow">Phase 1</p>
           <h1>Write together without merge conflicts.</h1>
           <p className="muted">
             Create a document, invite collaborators later, and edit live through

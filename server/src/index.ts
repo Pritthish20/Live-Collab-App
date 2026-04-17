@@ -1,3 +1,4 @@
+import type { Server as HttpServer } from "node:http";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
@@ -14,6 +15,8 @@ import { logger } from "./utils/logger.js";
 import { ResponseUtils } from "./utils/response.js";
 
 const app = express();
+let apiServer: HttpServer | null = null;
+let collaborationServer: ReturnType<typeof createCollaborationServer> | null = null;
 
 app.use(helmet());
 app.use(
@@ -45,36 +48,115 @@ app.use(errorMiddleware.handle);
 async function bootstrap() {
   await connectDatabase();
 
-  app.listen(env.SERVER_PORT, () => {
-    logger.info("api", "listening", {
-      url: `http://localhost:${env.SERVER_PORT}`
-    });
-  });
+  apiServer = await listenApi();
 
-  const collaborationServer = createCollaborationServer();
-  collaborationServer.listen();
-  logger.info("ws", "listening", {
-    url: `ws://localhost:${env.COLLAB_PORT}`
+  collaborationServer = createCollaborationServer();
+  await listenCollaboration(collaborationServer);
+}
+
+function listenApi() {
+  return new Promise<HttpServer>((resolve, reject) => {
+    const server = app.listen(env.SERVER_PORT);
+
+    function cleanup() {
+      server.off("error", onError);
+      server.off("listening", onListening);
+    }
+
+    function onError(error: Error) {
+      cleanup();
+      reject(error);
+    }
+
+    function onListening() {
+      cleanup();
+      logger.info("api", "listening", {
+        url: `http://localhost:${env.SERVER_PORT}`
+      });
+      resolve(server);
+    }
+
+    server.once("error", onError);
+    server.once("listening", onListening);
   });
 }
 
-process.on("SIGINT", () => {
-  logger.info("api", "shutdown", {
-    signal: "SIGINT"
+function listenCollaboration(server: ReturnType<typeof createCollaborationServer>) {
+  return new Promise<void>((resolve, reject) => {
+    function cleanup() {
+      server.httpServer.off("error", onError);
+    }
+
+    function onError(error: Error) {
+      cleanup();
+      reject(error);
+    }
+
+    server.httpServer.once("error", onError);
+    server
+      .listen()
+      .then(() => {
+        cleanup();
+        logger.info("ws", "listening", {
+          url: `ws://localhost:${env.COLLAB_PORT}`
+        });
+        resolve();
+      })
+      .catch((error: unknown) => {
+        cleanup();
+        reject(error);
+      });
   });
-  void disconnectDatabase().finally(() => process.exit(0));
+}
+
+async function shutdown(signal?: string) {
+  if (signal) {
+    logger.info("api", "shutdown", {
+      signal
+    });
+  }
+
+  if (collaborationServer) {
+    await collaborationServer.destroy();
+    collaborationServer = null;
+  }
+
+  if (apiServer) {
+    await new Promise<void>((resolve) => {
+      apiServer?.close(() => resolve());
+    });
+    apiServer = null;
+  }
+
+  await disconnectDatabase();
+}
+
+function getStartupErrorMessage(error: unknown) {
+  if (isNodeError(error) && error.code === "EADDRINUSE") {
+    return `Port already in use: ${error.port ?? "unknown"}`;
+  }
+
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
+function isNodeError(error: unknown): error is Error & {
+  code?: string;
+  port?: number;
+} {
+  return error instanceof Error;
+}
+
+process.on("SIGINT", () => {
+  void shutdown("SIGINT").finally(() => process.exit(0));
 });
 
 process.on("SIGTERM", () => {
-  logger.info("api", "shutdown", {
-    signal: "SIGTERM"
-  });
-  void disconnectDatabase().finally(() => process.exit(0));
+  void shutdown("SIGTERM").finally(() => process.exit(0));
 });
 
 bootstrap().catch((error) => {
   logger.error("api", "startup failed", {
-    message: error instanceof Error ? error.message : "Unknown error"
+    message: getStartupErrorMessage(error)
   });
-  void disconnectDatabase().finally(() => process.exit(1));
+  void shutdown().finally(() => process.exit(1));
 });

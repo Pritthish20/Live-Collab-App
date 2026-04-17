@@ -45,6 +45,9 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
   const [activeUsers, setActiveUsers] = useState<PresenceUser[]>([]);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const currentUserIdRef = useRef<string | null>(null);
+  const providerDestroyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   const documentRole = documentQuery.data?.role ?? null;
   const canEdit = RoleAccess.canEdit(documentRole);
   const canManage = RoleAccess.canManage(documentRole);
@@ -98,9 +101,17 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
   );
 
   useEffect(() => {
+    if (providerDestroyTimerRef.current) {
+      clearTimeout(providerDestroyTimerRef.current);
+      providerDestroyTimerRef.current = null;
+    }
+
     return () => {
-      provider.destroy();
-      ydoc.destroy();
+      providerDestroyTimerRef.current = setTimeout(() => {
+        provider.destroy();
+        ydoc.destroy();
+        providerDestroyTimerRef.current = null;
+      }, 100);
     };
   }, [provider, ydoc]);
 
@@ -232,8 +243,12 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
               : "Loading document access..."}
           </span>
         </div>
-        <div className={`connection-banner ${realtimeStatus.tone}`} role="status">
-          <strong>{realtimeStatus.label}</strong>
+        <div
+          className={`connection-banner ${realtimeStatus.tone} ${realtimeStatus.activity}`}
+          role="status"
+        >
+          <span className="sync-dot" aria-hidden="true" />
+          <strong>{realtimeStatus.shortLabel}</strong>
           <span>{realtimeStatus.message}</span>
         </div>
         <div className="editor-status-row">

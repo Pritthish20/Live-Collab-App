@@ -472,8 +472,8 @@ label.stack {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  min-height: 44px;
-  padding: 10px 12px;
+  min-height: 40px;
+  padding: 8px 10px;
 }
 
 .connection-banner.connected {
@@ -489,6 +489,40 @@ label.stack {
 .connection-banner.disconnected {
   background: var(--danger-soft);
   border-color: #ffd0cc;
+}
+
+.sync-dot {
+  background: var(--primary);
+  border-radius: 999px;
+  display: inline-block;
+  height: 10px;
+  width: 10px;
+}
+
+.connection-banner.syncing .sync-dot,
+.connection-banner.reconnecting .sync-dot {
+  animation: sync-pulse 1.2s ease-in-out infinite;
+}
+
+.connection-banner.reconnecting .sync-dot {
+  background: var(--accent);
+}
+
+.connection-banner.offline .sync-dot {
+  background: var(--danger);
+}
+
+@keyframes sync-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .presence-list {

@@ -21,6 +21,7 @@ const accessRevokedCloseEvent = {
 export function createCollaborationServer() {
   return new Server({
     port: env.COLLAB_PORT,
+    stopOnSignals: false,
     quiet: true,
     debounce: 1000,
     maxDebounce: 5000,

@@ -3,7 +3,9 @@ import type { ConnectionStatus } from "@/types";
 export type RealtimeStatusMeta = {
   label: string;
   message: string;
+  shortLabel: string;
   tone: "connected" | "connecting" | "disconnected";
+  activity: "idle" | "syncing" | "reconnecting" | "offline";
   syncLabel: string;
 };
 
@@ -16,7 +18,9 @@ export class RealtimeStatus {
     return {
       label: this.getConnectionLabel(status),
       message: this.getMessage(status, isSynced, unsyncedChanges),
+      shortLabel: this.getShortLabel(status, isSynced, unsyncedChanges),
       tone: status,
+      activity: this.getActivity(status, isSynced, unsyncedChanges),
       syncLabel: this.getSyncLabel(isSynced, unsyncedChanges)
     };
   }
@@ -47,17 +51,61 @@ export class RealtimeStatus {
     return "Syncing";
   }
 
+  private static getShortLabel(
+    status: ConnectionStatus,
+    isSynced: boolean,
+    unsyncedChanges: number
+  ) {
+    if (status === "disconnected") {
+      return "Offline";
+    }
+
+    if (status === "connecting") {
+      return "Reconnecting";
+    }
+
+    if (unsyncedChanges > 0) {
+      return "Syncing changes";
+    }
+
+    if (!isSynced) {
+      return "Syncing";
+    }
+
+    return "All changes synced";
+  }
+
+  private static getActivity(
+    status: ConnectionStatus,
+    isSynced: boolean,
+    unsyncedChanges: number
+  ): RealtimeStatusMeta["activity"] {
+    if (status === "disconnected") {
+      return "offline";
+    }
+
+    if (status === "connecting") {
+      return "reconnecting";
+    }
+
+    if (!isSynced || unsyncedChanges > 0) {
+      return "syncing";
+    }
+
+    return "idle";
+  }
+
   private static getMessage(
     status: ConnectionStatus,
     isSynced: boolean,
     unsyncedChanges: number
   ) {
     if (status === "connected" && isSynced) {
-      return "Live changes are synced.";
+      return "Every edit is saved.";
     }
 
     if (status === "connected" && unsyncedChanges > 0) {
-      return "Sending pending changes.";
+      return `${unsyncedChanges} change${unsyncedChanges === 1 ? "" : "s"} on the way.`;
     }
 
     if (status === "connected") {
@@ -65,9 +113,9 @@ export class RealtimeStatus {
     }
 
     if (status === "connecting") {
-      return "Reconnecting to the collaboration server.";
+      return "Reconnecting. Keep this tab open.";
     }
 
-    return "Keep this tab open. Pending edits will sync when the connection returns.";
+    return "Offline. Pending edits will sync when the connection returns.";
   }
 }
