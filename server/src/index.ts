@@ -5,6 +5,7 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { createCollaborationServer } from "./collaboration/hocuspocus.js";
+import { collaborationRuntime } from "./collaboration/runtime.js";
 import { env } from "./config/env.js";
 import { connectDatabase, disconnectDatabase } from "./db/prisma.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
@@ -51,6 +52,7 @@ async function bootstrap() {
   apiServer = await listenApi();
 
   collaborationServer = createCollaborationServer();
+  collaborationRuntime.setServer(collaborationServer);
   await listenCollaboration(collaborationServer);
 }
 
@@ -118,6 +120,7 @@ async function shutdown(signal?: string) {
 
   if (collaborationServer) {
     await collaborationServer.destroy();
+    collaborationRuntime.clearServer();
     collaborationServer = null;
   }
 

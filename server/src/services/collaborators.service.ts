@@ -6,6 +6,9 @@ import type {
 } from "../schemas/collaborators.schema.js";
 import { HttpError } from "../utils/errors.js";
 import {
+  ActivityEventType
+} from "./activity-logs.service.js";
+import {
   PermissionsService,
   permissionsService
 } from "./permissions.service.js";
@@ -101,11 +104,52 @@ export class CollaboratorsService {
     }
 
     if (existingCollaborator) {
-      const collaborator = await prisma.collaborator.update({
-        where: {
-          id: existingCollaborator.id
-        },
+      const collaborator = await prisma.$transaction(async (transaction) => {
+        const updatedCollaborator = await transaction.collaborator.update({
+          where: {
+            id: existingCollaborator.id
+          },
+          data: {
+            role: nextRole
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          }
+        });
+
+        if (existingCollaborator.role !== updatedCollaborator.role) {
+          await transaction.activityLog.create({
+            data: {
+              documentId,
+              actorId,
+              eventType: ActivityEventType.collaboratorRoleChanged,
+              metadata: {
+                collaboratorId: updatedCollaborator.id,
+                collaboratorEmail: updatedCollaborator.user.email,
+                previousRole: this.permissions.roleToApi(existingCollaborator.role),
+                nextRole: this.permissions.roleToApi(updatedCollaborator.role)
+              }
+            }
+          });
+        }
+
+        return updatedCollaborator;
+      });
+
+      return this.formatCollaborator(collaborator);
+    }
+
+    const collaborator = await prisma.$transaction(async (transaction) => {
+      const createdCollaborator = await transaction.collaborator.create({
         data: {
+          documentId,
+          userId: collaboratorUser.id,
           role: nextRole
         },
         include: {
@@ -119,24 +163,20 @@ export class CollaboratorsService {
         }
       });
 
-      return this.formatCollaborator(collaborator);
-    }
-
-    const collaborator = await prisma.collaborator.create({
-      data: {
-        documentId,
-        userId: collaboratorUser.id,
-        role: nextRole
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true
+      await transaction.activityLog.create({
+        data: {
+          documentId,
+          actorId,
+          eventType: ActivityEventType.collaboratorAdded,
+          metadata: {
+            collaboratorId: createdCollaborator.id,
+            collaboratorEmail: createdCollaborator.user.email,
+            role: this.permissions.roleToApi(createdCollaborator.role)
           }
         }
-      }
+      });
+
+      return createdCollaborator;
     });
 
     return this.formatCollaborator(collaborator);
@@ -160,22 +200,43 @@ export class CollaboratorsService {
       );
     }
 
-    const updatedCollaborator = await prisma.collaborator.update({
-      where: {
-        id: collaborator.id
-      },
-      data: {
-        role: this.inputRoleToDb(input.role)
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true
+    const nextRole = this.inputRoleToDb(input.role);
+    const updatedCollaborator = await prisma.$transaction(async (transaction) => {
+      const result = await transaction.collaborator.update({
+        where: {
+          id: collaborator.id
+        },
+        data: {
+          role: nextRole
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
           }
         }
+      });
+
+      if (collaborator.role !== result.role) {
+        await transaction.activityLog.create({
+          data: {
+            documentId,
+            actorId,
+            eventType: ActivityEventType.collaboratorRoleChanged,
+            metadata: {
+              collaboratorId: result.id,
+              collaboratorEmail: result.user.email,
+              previousRole: this.permissions.roleToApi(collaborator.role),
+              nextRole: this.permissions.roleToApi(result.role)
+            }
+          }
+        });
       }
+
+      return result;
     });
 
     return this.formatCollaborator(updatedCollaborator);
@@ -198,10 +259,25 @@ export class CollaboratorsService {
       );
     }
 
-    await prisma.collaborator.delete({
-      where: {
-        id: collaborator.id
-      }
+    await prisma.$transaction(async (transaction) => {
+      await transaction.activityLog.create({
+        data: {
+          documentId,
+          actorId,
+          eventType: ActivityEventType.collaboratorRemoved,
+          metadata: {
+            collaboratorId: collaborator.id,
+            collaboratorEmail: collaborator.user.email,
+            role: this.permissions.roleToApi(collaborator.role)
+          }
+        }
+      });
+
+      await transaction.collaborator.delete({
+        where: {
+          id: collaborator.id
+        }
+      });
     });
 
     return { ok: true };

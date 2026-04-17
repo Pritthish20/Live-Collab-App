@@ -3,7 +3,7 @@
 import { HocuspocusProvider } from "@hocuspocus/provider";
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCaret from "@tiptap/extension-collaboration-caret";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { EditorContent, type Editor, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -20,11 +20,21 @@ import { SessionStorage } from "@/utils/session";
 import { useDeleteDocument } from "../api/use-delete-document";
 import { useDocument } from "../api/use-document";
 import { useUpdateDocument } from "../api/use-update-document";
-import type { AwarenessIdentity, ConnectionStatus, PresenceUser } from "@/types";
+import type {
+  AwarenessIdentity,
+  CommentAnchor,
+  ConnectionStatus,
+  PresenceUser
+} from "@/types";
 import { AwarenessUtils } from "../utils/awareness";
 import { RealtimeStatus } from "../utils/realtime-status";
+import {
+  CollaborationSidebar,
+  type CollaborationTab
+} from "./collaboration-sidebar";
 import { PresenceList } from "./presence-list";
 import { ShareDocumentDialog } from "./share-document-dialog";
+import type { CommentDraft } from "./comments-panel";
 
 type CollaborativeEditorProps = {
   documentId: string;
@@ -44,6 +54,10 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [activeUsers, setActiveUsers] = useState<PresenceUser[]>([]);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [activeSidebarTab, setActiveSidebarTab] =
+    useState<CollaborationTab>("comments");
+  const [commentDraft, setCommentDraft] = useState<CommentDraft | null>(null);
+  const [selectionDraft, setSelectionDraft] = useState<CommentDraft | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
   const providerDestroyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
@@ -53,6 +67,7 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
   const canManage = RoleAccess.canManage(documentRole);
   const canRename = RoleAccess.canRename(documentRole);
   const canShare = RoleAccess.canShare(documentRole);
+  const canComment = canEdit;
   const isReadOnly = RoleAccess.isReadOnly(documentRole);
   const realtimeStatus = RealtimeStatus.getMeta(
     connectionStatus,
@@ -144,6 +159,9 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
       attributes: {
         "aria-label": "Collaborative document editor"
       }
+    },
+    onSelectionUpdate: ({ editor: editorInstance }) => {
+      setSelectionDraft(getCommentSelection(editorInstance));
     }
   });
 
@@ -178,6 +196,21 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
     }
   }
 
+  function startCommentFromSelection() {
+    const draft = getCommentSelection(editor);
+
+    if (!draft) {
+      return;
+    }
+
+    setCommentDraft(draft);
+    setActiveSidebarTab("comments");
+  }
+
+  function clearCommentDraft() {
+    setCommentDraft(null);
+  }
+
   if (documentQuery.isError || authError) {
     return (
       <Panel className="stack">
@@ -196,77 +229,103 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
 
   return (
     <div className="stack">
-      <Panel className="stack editor-toolbar">
-        <form className="document-title-form" onSubmit={onRename}>
-          <Input
-            aria-label="Document title"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            disabled={
-              !canRename || documentQuery.isLoading || isRealtimeDisconnected
-            }
+      <div className="document-workspace">
+        <div className="document-main-column stack">
+          <Panel className="stack editor-toolbar">
+            <form className="document-title-form" onSubmit={onRename}>
+              <Input
+                aria-label="Document title"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                disabled={
+                  !canRename || documentQuery.isLoading || isRealtimeDisconnected
+                }
+              />
+              {canRename ? (
+                <Button
+                  type="submit"
+                  disabled={updateDocument.isPending || isRealtimeDisconnected}
+                >
+                  Rename
+                </Button>
+              ) : null}
+              {canManage ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={onDelete}
+                  disabled={deleteDocument.isPending || isRealtimeDisconnected}
+                >
+                  Delete
+                </Button>
+              ) : null}
+              {canShare ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setIsShareOpen(true)}
+                  disabled={isRealtimeDisconnected}
+                >
+                  Share
+                </Button>
+              ) : null}
+            </form>
+            <div className="role-summary">
+              {documentRole ? <Badge>{RoleAccess.label(documentRole)}</Badge> : null}
+              <span className="muted">
+                {documentRole
+                  ? RoleAccess.description(documentRole)
+                  : "Loading document access..."}
+              </span>
+            </div>
+            <div
+              className={`connection-banner ${realtimeStatus.tone} ${realtimeStatus.activity}`}
+              role="status"
+            >
+              <span className="sync-dot" aria-hidden="true" />
+              <strong>{realtimeStatus.shortLabel}</strong>
+              <span>{realtimeStatus.message}</span>
+            </div>
+            <div className="editor-status-row">
+              <Badge>Connection: {realtimeStatus.label}</Badge>
+              <Badge>{realtimeStatus.syncLabel}</Badge>
+              {isReadOnly ? <Badge>Read only</Badge> : null}
+              {selectionDraft?.quote && canComment ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={startCommentFromSelection}
+                  disabled={isRealtimeDisconnected}
+                >
+                  Comment selection
+                </Button>
+              ) : null}
+            </div>
+            <PresenceList users={activeUsers} connectionStatus={connectionStatus} />
+            {authError ? <p className="error">{authError}</p> : null}
+            {updateDocument.error ? (
+              <p className="error">{updateDocument.error.message}</p>
+            ) : null}
+            {deleteDocument.error ? (
+              <p className="error">{deleteDocument.error.message}</p>
+            ) : null}
+          </Panel>
+          <div className="editor-frame">
+            <EditorContent editor={editor} />
+          </div>
+        </div>
+        <div className="document-sidebar-column">
+          <CollaborationSidebar
+            activeTab={activeSidebarTab}
+            canComment={canComment}
+            canEdit={canEdit}
+            canManage={canManage}
+            commentDraft={commentDraft}
+            documentId={documentId}
+            onActiveTabChange={setActiveSidebarTab}
+            onConsumeCommentDraft={clearCommentDraft}
           />
-          {canRename ? (
-            <Button
-              type="submit"
-              disabled={updateDocument.isPending || isRealtimeDisconnected}
-            >
-              Rename
-            </Button>
-          ) : null}
-          {canManage ? (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onDelete}
-              disabled={deleteDocument.isPending || isRealtimeDisconnected}
-            >
-              Delete
-            </Button>
-          ) : null}
-          {canShare ? (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setIsShareOpen(true)}
-              disabled={isRealtimeDisconnected}
-            >
-              Share
-            </Button>
-          ) : null}
-        </form>
-        <div className="role-summary">
-          {documentRole ? <Badge>{RoleAccess.label(documentRole)}</Badge> : null}
-          <span className="muted">
-            {documentRole
-              ? RoleAccess.description(documentRole)
-              : "Loading document access..."}
-          </span>
         </div>
-        <div
-          className={`connection-banner ${realtimeStatus.tone} ${realtimeStatus.activity}`}
-          role="status"
-        >
-          <span className="sync-dot" aria-hidden="true" />
-          <strong>{realtimeStatus.shortLabel}</strong>
-          <span>{realtimeStatus.message}</span>
-        </div>
-        <div className="editor-status-row">
-          <Badge>Connection: {realtimeStatus.label}</Badge>
-          <Badge>{realtimeStatus.syncLabel}</Badge>
-          {isReadOnly ? <Badge>Read only</Badge> : null}
-        </div>
-        <PresenceList users={activeUsers} connectionStatus={connectionStatus} />
-        {authError ? <p className="error">{authError}</p> : null}
-        {updateDocument.error ? (
-          <p className="error">{updateDocument.error.message}</p>
-        ) : null}
-        {deleteDocument.error ? (
-          <p className="error">{deleteDocument.error.message}</p>
-        ) : null}
-      </Panel>
-      <div className="editor-frame">
-        <EditorContent editor={editor} />
       </div>
       {canShare ? (
         <ShareDocumentDialog
@@ -277,4 +336,34 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
       ) : null}
     </div>
   );
+}
+
+function getCommentSelection(editor: Editor | null) {
+  if (!editor) {
+    return null;
+  }
+
+  const { from, to } = editor.state.selection;
+
+  if (from === to) {
+    return null;
+  }
+
+  const quote = editor.state.doc.textBetween(from, to, " ").trim().slice(0, 500);
+
+  if (!quote) {
+    return null;
+  }
+
+  const anchor: CommentAnchor = {
+    from,
+    to,
+    text: quote
+  };
+
+  return {
+    anchor,
+    quote,
+    token: Date.now()
+  };
 }

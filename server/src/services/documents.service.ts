@@ -3,6 +3,11 @@ import { prisma } from "../db/prisma.js";
 import type { DocumentInput } from "../schemas/documents.schema.js";
 import { HttpError } from "../utils/errors.js";
 import {
+  ActivityEventType,
+  ActivityLogsService,
+  activityLogsService
+} from "./activity-logs.service.js";
+import {
   PermissionsService,
   permissionsService
 } from "./permissions.service.js";
@@ -16,30 +21,48 @@ type DocumentSummaryRecord = {
 };
 
 export class DocumentsService {
-  constructor(private readonly permissions: PermissionsService = permissionsService) {}
+  constructor(
+    private readonly permissions: PermissionsService = permissionsService,
+    private readonly activityLogs: ActivityLogsService = activityLogsService
+  ) {}
 
   async createDocument(userId: string, input: DocumentInput) {
-    const document = await prisma.document.create({
-      data: {
-        title: input.title,
-        ownerId: userId,
-        collaborators: {
-          create: {
-            userId,
-            role: Role.OWNER
+    const document = await prisma.$transaction(async (transaction) => {
+      const createdDocument = await transaction.document.create({
+        data: {
+          title: input.title,
+          ownerId: userId,
+          collaborators: {
+            create: {
+              userId,
+              role: Role.OWNER
+            }
           }
-        }
-      },
-      include: {
-        collaborators: {
-          where: {
-            userId
+        },
+        include: {
+          collaborators: {
+            where: {
+              userId
+            },
+            select: {
+              role: true
+            }
           },
-          select: {
-            role: true
+        }
+      });
+
+      await transaction.activityLog.create({
+        data: {
+          documentId: createdDocument.id,
+          actorId: userId,
+          eventType: ActivityEventType.documentCreated,
+          metadata: {
+            title: createdDocument.title
           }
         }
-      }
+      });
+
+      return createdDocument;
     });
 
     return this.formatDocumentSummary(document);
@@ -110,13 +133,41 @@ export class DocumentsService {
       throw new HttpError(403, "FORBIDDEN", "You cannot edit this document.");
     }
 
-    const document = await prisma.document.update({
+    const existingDocument = await prisma.document.findUnique({
       where: {
         id: documentId
-      },
-      data: {
-        title: input.title
       }
+    });
+
+    if (!existingDocument) {
+      throw new HttpError(404, "DOCUMENT_NOT_FOUND", "Document not found.");
+    }
+
+    const document = await prisma.$transaction(async (transaction) => {
+      const updatedDocument = await transaction.document.update({
+        where: {
+          id: documentId
+        },
+        data: {
+          title: input.title
+        }
+      });
+
+      if (existingDocument.title !== updatedDocument.title) {
+        await transaction.activityLog.create({
+          data: {
+            documentId,
+            actorId: userId,
+            eventType: ActivityEventType.documentRenamed,
+            metadata: {
+              previousTitle: existingDocument.title,
+              nextTitle: updatedDocument.title
+            }
+          }
+        });
+      }
+
+      return updatedDocument;
     });
 
     return {
@@ -147,6 +198,10 @@ export class DocumentsService {
     });
 
     return { ok: true };
+  }
+
+  async listActivity(documentId: string, userId: string) {
+    return this.activityLogs.listDocumentActivity(documentId, userId);
   }
 
   private formatDocumentSummary(document: DocumentSummaryRecord) {

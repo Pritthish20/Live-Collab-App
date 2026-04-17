@@ -32,6 +32,21 @@ export class DocumentsController {
     }
   };
 
+  activity = async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const user = RequestUtils.getAuthenticatedUser(request);
+      ResponseUtils.sendData(
+        response,
+        await this.service.listActivity(
+          RequestUtils.getRequiredParam(request, "id"),
+          user.id
+        )
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
   get = async (request: Request, response: Response, next: NextFunction) => {
     try {
       const user = RequestUtils.getAuthenticatedUser(request);
