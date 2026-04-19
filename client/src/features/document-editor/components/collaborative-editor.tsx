@@ -157,7 +157,8 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
     ],
     editorProps: {
       attributes: {
-        "aria-label": "Collaborative document editor"
+        "aria-label": "Collaborative document editor",
+        "data-testid": "document-editor-surface"
       }
     },
     onSelectionUpdate: ({ editor: editorInstance }) => {
@@ -237,6 +238,7 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
                 aria-label="Document title"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
+                data-testid="editor-document-title"
                 disabled={
                   !canRename || documentQuery.isLoading || isRealtimeDisconnected
                 }
@@ -310,7 +312,7 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
               <p className="error">{deleteDocument.error.message}</p>
             ) : null}
           </Panel>
-          <div className="editor-frame">
+          <div className="editor-frame" data-testid="document-editor">
             <EditorContent editor={editor} />
           </div>
         </div>

@@ -1,4 +1,5 @@
 import type { Server as HttpServer } from "node:http";
+import type { Server as CollaborationServer } from "@hocuspocus/server";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
@@ -17,7 +18,7 @@ import { ResponseUtils } from "./utils/response.js";
 
 const app = express();
 let apiServer: HttpServer | null = null;
-let collaborationServer: ReturnType<typeof createCollaborationServer> | null = null;
+let collaborationServer: CollaborationServer | null = null;
 
 app.use(helmet());
 app.use(
@@ -38,7 +39,8 @@ app.use(requestLoggerMiddleware.handle);
 
 app.get("/health", (_request, response) => {
   ResponseUtils.sendData(response, {
-    status: "ok"
+    status: "ok",
+    instance: env.INSTANCE_NAME
   });
 });
 
@@ -49,11 +51,11 @@ app.use(errorMiddleware.handle);
 async function bootstrap() {
   await connectDatabase();
 
-  apiServer = await listenApi();
-
-  collaborationServer = createCollaborationServer();
-  collaborationRuntime.setServer(collaborationServer);
+  collaborationServer = await createCollaborationServer();
   await listenCollaboration(collaborationServer);
+  collaborationRuntime.setServer(collaborationServer);
+
+  apiServer = await listenApi();
 }
 
 function listenApi() {
@@ -83,7 +85,7 @@ function listenApi() {
   });
 }
 
-function listenCollaboration(server: ReturnType<typeof createCollaborationServer>) {
+function listenCollaboration(server: CollaborationServer) {
   return new Promise<void>((resolve, reject) => {
     function cleanup() {
       server.httpServer.off("error", onError);

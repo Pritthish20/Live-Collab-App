@@ -9,9 +9,17 @@
   "scripts": {
     "dev": "concurrently -n server,client -c cyan,green \"npm run dev -w server\" \"npm run dev -w client\"",
     "build": "npm run build -w server && npm run build -w client",
-    "typecheck": "npm run typecheck -w server && npm run typecheck -w client"
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
+    "test:e2e": "playwright test",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:up:local": "docker compose -f docker-compose.local.yml up --build",
+    "docker:down:local": "docker compose -f docker-compose.local.yml down",
+    "docker:up:full": "docker compose -f docker-compose.full.yml up --build",
+    "docker:down:full": "docker compose -f docker-compose.full.yml down"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "concurrently": "^9.0.0"
   }
 }

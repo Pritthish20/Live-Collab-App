@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma.js";
 import type { SnapshotCreateInput } from "../schemas/snapshots.schema.js";
 import { HttpError } from "../utils/errors.js";
@@ -51,7 +52,7 @@ export class SnapshotsService {
       take: 100
     });
 
-    return snapshots.map((snapshot) => this.formatSnapshot(snapshot));
+    return snapshots.map((snapshot: SnapshotRecord) => this.formatSnapshot(snapshot));
   }
 
   async createSnapshot(
@@ -79,7 +80,8 @@ export class SnapshotsService {
       );
     }
 
-    const snapshot = await prisma.$transaction(async (transaction) => {
+    const snapshot = await prisma.$transaction(
+      async (transaction: Prisma.TransactionClient) => {
       const createdSnapshot = await transaction.snapshot.create({
         data: {
           documentId,
@@ -110,8 +112,9 @@ export class SnapshotsService {
         }
       });
 
-      return createdSnapshot;
-    });
+        return createdSnapshot;
+      }
+    );
 
     return this.formatSnapshot(snapshot);
   }
@@ -136,7 +139,7 @@ export class SnapshotsService {
       throw new HttpError(404, "SNAPSHOT_NOT_FOUND", "Snapshot not found.");
     }
 
-    await prisma.$transaction(async (transaction) => {
+    await prisma.$transaction(async (transaction: Prisma.TransactionClient) => {
       await transaction.documentState.upsert({
         where: {
           documentId

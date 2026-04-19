@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { type Prisma, Role } from "@prisma/client";
 import { prisma } from "../db/prisma.js";
 import type { DocumentInput } from "../schemas/documents.schema.js";
 import { HttpError } from "../utils/errors.js";
@@ -27,7 +27,8 @@ export class DocumentsService {
   ) {}
 
   async createDocument(userId: string, input: DocumentInput) {
-    const document = await prisma.$transaction(async (transaction) => {
+    const document = await prisma.$transaction(
+      async (transaction: Prisma.TransactionClient) => {
       const createdDocument = await transaction.document.create({
         data: {
           title: input.title,
@@ -62,8 +63,9 @@ export class DocumentsService {
         }
       });
 
-      return createdDocument;
-    });
+        return createdDocument;
+      }
+    );
 
     return this.formatDocumentSummary(document);
   }
@@ -143,7 +145,8 @@ export class DocumentsService {
       throw new HttpError(404, "DOCUMENT_NOT_FOUND", "Document not found.");
     }
 
-    const document = await prisma.$transaction(async (transaction) => {
+    const document = await prisma.$transaction(
+      async (transaction: Prisma.TransactionClient) => {
       const updatedDocument = await transaction.document.update({
         where: {
           id: documentId
@@ -167,8 +170,9 @@ export class DocumentsService {
         });
       }
 
-      return updatedDocument;
-    });
+        return updatedDocument;
+      }
+    );
 
     return {
       id: document.id,

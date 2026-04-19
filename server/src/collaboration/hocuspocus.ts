@@ -1,3 +1,4 @@
+import { createConnection } from "node:net";
 import { Database } from "@hocuspocus/extension-database";
 import { MessageType, Server } from "@hocuspocus/server";
 import * as decoding from "lib0/decoding";
@@ -18,8 +19,22 @@ const accessRevokedCloseEvent = {
   reason: "Access revoked"
 };
 
-export function createCollaborationServer() {
+const REDIS_EXTENSION_MODULE = "@hocuspocus/extension-redis";
+
+type RedisExtensionModule = {
+  Redis: new (config: { host: string; port: number }) => unknown;
+};
+
+export async function createCollaborationServer() {
+  const redisExtension = await createRedisExtension();
+
+  logger.info("ws", "redis ready", {
+    instance: env.INSTANCE_NAME,
+    target: `${env.REDIS_HOST}:${env.REDIS_PORT}`
+  });
+
   return new Server({
+    name: env.INSTANCE_NAME,
     port: env.COLLAB_PORT,
     stopOnSignals: false,
     quiet: true,
@@ -118,6 +133,7 @@ export function createCollaborationServer() {
       });
     },
     extensions: [
+      redisExtension as never,
       new Database({
         fetch: async ({ documentName }) => {
           return collaborationService.fetchDocumentState(documentName);
@@ -131,6 +147,64 @@ export function createCollaborationServer() {
         }
       })
     ]
+  });
+}
+
+async function createRedisExtension() {
+  await assertRedisAvailable();
+
+  try {
+    const redisModule = (await import(
+      REDIS_EXTENSION_MODULE
+    )) as RedisExtensionModule;
+
+    return new redisModule.Redis({
+      host: env.REDIS_HOST,
+      port: env.REDIS_PORT
+    });
+  } catch (error) {
+    throw new Error(
+      `Missing Redis extension. Install ${REDIS_EXTENSION_MODULE} in server dependencies before starting the collaboration server.`
+    );
+  }
+}
+
+function assertRedisAvailable() {
+  return new Promise<void>((resolve, reject) => {
+    const socket = createConnection({
+      host: env.REDIS_HOST,
+      port: env.REDIS_PORT
+    });
+
+    const timer = setTimeout(() => {
+      socket.destroy();
+      reject(
+        new Error(`Redis unavailable at ${env.REDIS_HOST}:${env.REDIS_PORT}`)
+      );
+    }, 2000);
+
+    function cleanup() {
+      clearTimeout(timer);
+      socket.off("connect", onConnect);
+      socket.off("error", onError);
+    }
+
+    function onConnect() {
+      cleanup();
+      socket.end();
+      resolve();
+    }
+
+    function onError() {
+      cleanup();
+      socket.destroy();
+      reject(
+        new Error(`Redis unavailable at ${env.REDIS_HOST}:${env.REDIS_PORT}`)
+      );
+    }
+
+    socket.once("connect", onConnect);
+    socket.once("error", onError);
   });
 }
 

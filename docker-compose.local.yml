@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: collabpad-local-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: collabpad
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - collabpad-local-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d collabpad"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: collabpad-local-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - collabpad-local-redis-data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: collabpad-local-server
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/collabpad?schema=public
+      JWT_SECRET: replace-with-a-long-random-secret-for-local-docker
+      CLIENT_ORIGIN: http://localhost:3000
+      SERVER_PORT: 4000
+      COLLAB_PORT: 1234
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      INSTANCE_NAME: local-server
+      COOKIE_NAME: collabpad_session
+      NODE_ENV: production
+    command: ["sh", "-c", "npm run prisma:migrate:deploy -w server && npm run start -w server"]
+    ports:
+      - "4000:4000"
+      - "1234:1234"
+    restart: unless-stopped
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000/api
+        NEXT_PUBLIC_COLLAB_URL: ws://localhost:1234
+    container_name: collabpad-local-client
+    depends_on:
+      - server
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+    restart: unless-stopped
+
+volumes:
+  collabpad-local-postgres-data:
+  collabpad-local-redis-data:

@@ -18,6 +18,8 @@ client/.env.*.local
 # Logs
 *.log
 npm-debug.log*
+playwright-report/
+test-results/
 
 # Local project documentation requested to stay out of git.
 docs/

@@ -22,13 +22,22 @@ export function CreateDocumentForm() {
   }
 
   return (
-    <form className="create-document-form" onSubmit={onCreate}>
+    <form
+      className="create-document-form"
+      onSubmit={onCreate}
+      data-testid="create-document-form"
+    >
       <Input
         value={title}
         onChange={(event) => setTitle(event.target.value)}
         aria-label="Document title"
+        data-testid="create-document-title"
       />
-      <Button type="submit" disabled={createDocument.isPending}>
+      <Button
+        type="submit"
+        disabled={createDocument.isPending}
+        data-testid="create-document-submit"
+      >
         Create
       </Button>
       {createDocument.error ? (

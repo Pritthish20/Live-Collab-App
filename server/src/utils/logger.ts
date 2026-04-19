@@ -1,3 +1,5 @@
+import { env } from "../config/env.js";
+
 type LogLevel = "info" | "warn" | "error";
 
 type LogMeta = Record<string, boolean | number | string | null | undefined>;
@@ -41,11 +43,12 @@ export class Logger {
   }
 
   private formatMeta(meta?: LogMeta) {
-    if (!meta) {
-      return "";
-    }
+    const withInstance = {
+      instance: env.INSTANCE_NAME,
+      ...meta
+    };
 
-    const details = Object.entries(meta)
+    const details = Object.entries(withInstance)
       .filter(([, value]) => value !== undefined && value !== null && value !== "")
       .map(([key, value]) => `${key}=${String(value)}`)
       .join(" ");

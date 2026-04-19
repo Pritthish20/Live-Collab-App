@@ -7,15 +7,6 @@ client/  Next.js, Tiptap, Yjs, Hocuspocus provider
 server/  Express, Hocuspocus, Prisma, PostgreSQL
 ```
 
-## Phase 1 Scope
-
-- Authentication.
-- Document CRUD.
-- Real-time collaborative editing.
-- Presence and cursor awareness.
-- Yjs persistence.
-- Basic role checks.
-
 ## Local Setup
 
 1. Install dependencies:
@@ -24,17 +15,53 @@ server/  Express, Hocuspocus, Prisma, PostgreSQL
 npm install
 ```
 
-2. Start local PostgreSQL:
+2. Start local infrastructure:
 
 ```sh
-docker compose up -d postgres
+npm run docker:up
 ```
 
-Redis is defined for later scaling work, but it is not required for Phase 1. When needed:
+This default compose file is intentionally lightweight and starts only:
+
+- PostgreSQL
+- Redis
+
+Run the application on your machine during development:
 
 ```sh
-docker compose --profile phase4 up -d redis
+npm run dev
 ```
+
+Use the single-instance full app stack when you want to test the entire Docker
+build locally without scaling:
+
+```sh
+npm run docker:up:local
+```
+
+That local full-app stack starts:
+
+- PostgreSQL
+- Redis
+- one backend instance
+- client container
+
+The local backend container applies Prisma migrations before it starts.
+
+Use the full Docker architecture only when you want to demo scaling locally:
+
+```sh
+npm run docker:up:full
+```
+
+That full stack starts:
+
+- PostgreSQL
+- Redis
+- Prisma migration runner
+- two backend instances
+- nginx gateway
+- client container
 
 3. Configure environment:
 
@@ -48,12 +75,6 @@ cp client/.env.example client/.env.local
 ```sh
 npm run prisma:generate -w server
 npm run prisma:migrate -w server
-```
-
-5. Start both apps:
-
-```sh
-npm run dev
 ```
 
 Local URLs:
