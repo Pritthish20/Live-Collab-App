@@ -637,7 +637,8 @@ label.stack {
 .activity-list,
 .snapshot-list,
 .comment-thread-list,
-.comment-list {
+.comment-list,
+.ai-output {
   display: grid;
   gap: 12px;
 }
@@ -647,13 +648,48 @@ label.stack {
 .comment-thread,
 .comment-item,
 .empty-state,
-.comment-quote {
+.comment-quote,
+.ai-card,
+.ai-output-section {
   background: var(--panel-soft);
   border: 1px solid var(--line);
   border-radius: 8px;
   display: grid;
   gap: 8px;
   padding: 14px;
+}
+
+.ai-card {
+  background: #ffffff;
+}
+
+.ai-card-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.ai-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ai-output-section {
+  box-shadow: none;
+}
+
+.ai-output-section ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.ai-output-section li {
+  overflow-wrap: anywhere;
 }
 
 .comment-thread {

@@ -26,10 +26,19 @@
 - Hocuspocus for the Yjs WebSocket collaboration server.
 - Prisma ORM for database access.
 - PostgreSQL for application metadata and persisted collaboration state.
+- Gemini API for AI document and comment summarization.
+- PDFKit for server-side AI report PDF generation.
 - Argon2id for password hashing.
 - JWT or secure cookie-backed sessions for authentication.
 - Zod for request validation.
 - Helmet, CORS, and rate limiting for API hardening.
+
+## AI
+
+- AI calls are owned by the backend so provider keys are not exposed to the
+  browser.
+- The provider layer is designed so Gemini can be replaced or extended later.
+- AI input is limited to control token usage for local and free-tier testing.
 
 ## Realtime
 

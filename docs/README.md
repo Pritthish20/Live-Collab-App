@@ -13,6 +13,7 @@ This folder contains the project documentation for CollabPad.
 - [Security and Permissions](07-security-and-permissions.md)
 - [Phases and Roadmap](08-phases-and-roadmap.md)
 - [Testing and Deployment](09-testing-and-deployment.md)
+- [AI Collaboration Intelligence](10-ai-collaboration-intelligence.md)
 
 ## Archive
 
@@ -30,6 +31,7 @@ This folder contains the project documentation for CollabPad.
 7. Security and permissions
 8. Phases and roadmap
 9. Testing and deployment
+10. AI collaboration intelligence
 
 ## Repository Shape
 

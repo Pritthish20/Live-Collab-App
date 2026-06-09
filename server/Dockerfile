@@ -10,6 +10,7 @@ RUN npm install
 
 COPY server server
 
+ENV DATABASE_URL="postgresql://postgres:postgres@postgres:5432/collabpad?schema=public"
 RUN npm run prisma:generate -w server
 
 RUN npm run build -w server

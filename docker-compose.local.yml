@@ -37,6 +37,8 @@ services:
       context: .
       dockerfile: server/Dockerfile
     container_name: collabpad-local-server
+    env_file:
+      - ./server/.env
     depends_on:
       postgres:
         condition: service_healthy

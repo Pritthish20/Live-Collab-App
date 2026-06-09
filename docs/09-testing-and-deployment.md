@@ -71,6 +71,11 @@ JWT_SECRET=
 CLIENT_ORIGIN=
 SERVER_PORT=
 HOCUSPOCUS_PATH=
+AI_PROVIDER=
+AI_API_KEY=
+AI_MODEL=
+AI_BASE_URL=
+AI_MAX_INPUT_CHARS=
 ```
 
 Later:
@@ -138,6 +143,7 @@ Single-instance Docker app stack:
 - `server` on `http://localhost:4000`
 - Hocuspocus on `ws://localhost:1234`
 - `client` on `http://localhost:3000`
+- AI provider configuration loaded from `server/.env`
 
 Use this when you want to verify the whole Dockerized app locally without the
 memory overhead of multiple backend instances and the nginx gateway.
@@ -173,6 +179,8 @@ Notes:
 - The default `docker-compose.yml` is the low-memory dev stack.
 - `docker-compose.local.yml` is a standalone single-instance full-app stack.
 - `docker-compose.full.yml` is the heavier local architecture/demo stack.
+- Local and full app server containers load `server/.env` for AI provider
+  configuration.
 - Redis is required in the local scaled setup.
 - The server expects `@hocuspocus/extension-redis` to be installed in workspace dependencies.
 - Because this repository may be updated in an offline environment, run `npm install` locally before the first Docker build so the lockfile and workspace dependencies are aligned.
@@ -197,5 +205,7 @@ Notes:
 - CORS limited to the real client origin.
 - WebSocket auth enabled.
 - Yjs persistence enabled.
+- AI provider key stored only on the server.
+- AI input limits configured for token control.
 - Basic logs and error tracking enabled.
 - Backups configured for PostgreSQL.

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { activityLogsController } from "../controllers/activity-logs.controller.js";
+import { aiController } from "../controllers/ai.controller.js";
 import { commentsController } from "../controllers/comments.controller.js";
 import { collaboratorsController } from "../controllers/collaborators.controller.js";
 import { documentsController } from "../controllers/documents.controller.js";
@@ -14,6 +15,12 @@ export class DocumentsRoutes {
 
     this.router.post("/", documentsController.create);
     this.router.get("/", documentsController.list);
+    this.router.post("/:id/ai/report", aiController.generateDocumentReport);
+    this.router.post(
+      "/:id/ai/report/pdf",
+      aiController.downloadDocumentReportPdf
+    );
+    this.router.post("/:id/ai/comments-summary", aiController.summarizeComments);
     this.router.get("/:id/activity", activityLogsController.list);
     this.router.get("/:id/comments", commentsController.list);
     this.router.post("/:id/comments", commentsController.createThread);

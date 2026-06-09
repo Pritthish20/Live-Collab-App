@@ -99,3 +99,17 @@ export type CommentThread = {
   resolvedBy: User | null;
   comments: CommentEntry[];
 };
+
+export type AiDocumentReport = {
+  summary: string;
+  keyPoints: string[];
+  actionItems: string[];
+  risks: string[];
+};
+
+export type AiCommentsSummary = {
+  activeDiscussions: string[];
+  resolvedDecisions: string[];
+  blockers: string[];
+  followUps: string[];
+};

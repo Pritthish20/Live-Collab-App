@@ -14,6 +14,9 @@ document history, comments, and a scalable WebSocket backend.
 - Snapshot creation and restore
 - Activity logs for document actions
 - Comment threads with reply, resolve, and reopen flow
+- AI document intelligence reports with summaries, key points, action items, and risks
+- AI comment-thread summarization
+- Downloadable AI-generated PDF reports
 - Redis-backed scaling support for multi-instance collaboration
 - Playwright browser smoke testing
 
@@ -36,6 +39,8 @@ document history, comments, and a scalable WebSocket backend.
 - Prisma
 - PostgreSQL
 - Redis
+- Gemini API
+- PDFKit
 
 ### Tooling
 
@@ -91,6 +96,13 @@ Key design choices:
 - Playwright E2E setup
 - UI and workflow polish
 
+### AI Collaboration Intelligence
+
+- AI document reports
+- AI comment summaries
+- PDF report export
+- Backend-owned AI provider integration
+
 ## Documentation
 
 Primary docs:
@@ -105,6 +117,7 @@ Primary docs:
 - [Security and Permissions](docs/07-security-and-permissions.md)
 - [Phases and Roadmap](docs/08-phases-and-roadmap.md)
 - [Testing and Deployment](docs/09-testing-and-deployment.md)
+- [AI Collaboration Intelligence](docs/10-ai-collaboration-intelligence.md)
 
 Archived reference material:
 
@@ -189,6 +202,8 @@ This project is a strong showcase for:
 - WebSocket authorization
 - role-based access control
 - persistence and recovery flows
+- AI-assisted document intelligence
+- server-side PDF generation
 - monorepo frontend/backend architecture
 - Dockerized local environments
 

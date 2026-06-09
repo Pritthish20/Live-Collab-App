@@ -55,12 +55,28 @@ GET   /api/documents/:id/comments
 PATCH /api/documents/:id/comments/:commentId
 ```
 
+## AI Collaboration Intelligence
+
+```txt
+POST /api/documents/:id/ai/report
+POST /api/documents/:id/ai/comments-summary
+POST /api/documents/:id/ai/report/pdf
+```
+
+AI report and comment summary endpoints require authenticated document read
+access and return structured AI output through the standard API envelope.
+
+The PDF endpoint requires document read access and returns an `application/pdf`
+download.
+
 ## Access Rules
 
 - Owner can read, edit, share, change roles, remove collaborators, delete document.
 - Editor can read and edit.
 - Viewer can read only.
 - Unknown or unauthenticated user cannot access document metadata or WebSocket sync.
+- Owner, editor, and viewer can generate AI reports and comment summaries because
+  these features require read access.
 
 ## Response Shape
 

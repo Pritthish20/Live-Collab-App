@@ -19,6 +19,20 @@ const envSchema = z.object({
   REDIS_PORT: z.coerce.number().int().positive().default(6379),
   INSTANCE_NAME: z.string().min(1),
   COOKIE_NAME: z.string().default("collabpad_session"),
+  AI_PROVIDER: z
+    .enum(["gemini", "groq", "openrouter", "ollama"])
+    .default("gemini"),
+  AI_API_KEY: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.length > 0 ? value : undefined)),
+  AI_MODEL: z.string().default("gemini-2.5-flash"),
+  AI_BASE_URL: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.length > 0 ? value : undefined))
+    .pipe(z.string().url().optional()),
+  AI_MAX_INPUT_CHARS: z.coerce.number().int().positive().default(12000),
   NODE_ENV: z.string().default("development")
 });
 

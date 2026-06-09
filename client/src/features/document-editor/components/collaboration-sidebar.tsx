@@ -2,11 +2,12 @@
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Panel } from "@/components/ui/panel";
+import { AiPanel } from "./ai-panel";
 import { ActivityFeed } from "./activity-feed";
 import { CommentsPanel, type CommentDraft } from "./comments-panel";
 import { SnapshotsPanel } from "./snapshots-panel";
 
-export type CollaborationTab = "comments" | "snapshots" | "activity";
+export type CollaborationTab = "comments" | "snapshots" | "activity" | "ai";
 
 type CollaborationSidebarProps = {
   activeTab: CollaborationTab;
@@ -54,6 +55,13 @@ export function CollaborationSidebar({
           >
             Activity
           </TabsTrigger>
+          <TabsTrigger
+            type="button"
+            aria-pressed={activeTab === "ai"}
+            onClick={() => onActiveTabChange("ai")}
+          >
+            AI
+          </TabsTrigger>
         </TabsList>
 
         <div className="sidebar-content">
@@ -75,6 +83,7 @@ export function CollaborationSidebar({
           {activeTab === "activity" ? (
             <ActivityFeed documentId={documentId} />
           ) : null}
+          {activeTab === "ai" ? <AiPanel documentId={documentId} /> : null}
         </div>
       </Tabs>
     </Panel>
